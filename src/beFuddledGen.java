@@ -1,5 +1,6 @@
 import javax.json.*;
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -35,8 +36,7 @@ public class beFuddledGen {
         }
 
         //add Game objects to the list of games we need to generate
-        ArrayList<Game> gameList = generateGameList(numJSONObjectToGenerate);
-
+        ArrayList<User> users = generateGameList(numJSONObjectToGenerate);
 
         try {
             writer.println("[");
@@ -46,23 +46,29 @@ public class beFuddledGen {
         }
 
         //generate the json object and write to file
-        while (numJSONObjectToGenerate-- > 0 && !gameList.isEmpty()) {
-            int x = (int) (Math.random() * gameList.size());
-            Game currentGame = gameList.get(x);
+        int curGameNumber = 1;
+        while (numJSONObjectToGenerate-- > 0 && !users.isEmpty()) {
+            User curUser;
+            do {
+                curUser = users.get((int) (Math.random() * users.size()));
+            } while (!curUser.hasGameInQue() && users.remove(curUser));
+
+            if (!curUser.isGameStarted()) {
+                curUser.setGameNumber(curGameNumber++);
+            }
+
             try {
-                writer.println(currentGame.step());
+                writer.println(curUser.step());
             } catch (Exception e) {
                 System.out.println("Write to file failed. Please try running program again!");
                 return;
             }
-            //remove the game from list if it finished
-            if(currentGame.getGameCpmplete()) {
-                gameList.remove(x);
+            // clean up for the current user
+            if (!curUser.hasGameInQue()) users.remove(curUser);
+
+            if (users.isEmpty() && numJSONObjectToGenerate > 0){
+                users = generateGameList(Integer.parseInt(args[1]));
             }
-        }
-        //if we didn't generate enough json objects, need to restart the process again.
-        if (numJSONObjectToGenerate > 0) {
-            gameList = generateGameList(Integer.parseInt(args[1]));
         }
 
         try {
@@ -75,8 +81,9 @@ public class beFuddledGen {
         writer.close();
     }
 
-    private static ArrayList<Game> generateGameList(int numJSONObjectToGenerate) {
-        ArrayList<Game> retVal = new ArrayList<>();
+    private static ArrayList<User> generateGameList(int numJSONObjectToGenerate) {
+        ArrayList<User> retVal = new ArrayList<>();
+
         Random gen = new Random();
 
         int totalGames = numJSONObjectToGenerate / (Math.abs((int) (gen.nextGaussian() * 5 + 36)) + 9);
@@ -84,10 +91,59 @@ public class beFuddledGen {
         for (int i = 1; i <= totalGames; i++) {
             int maxStep = Math.abs((int) (gen.nextGaussian() * 5 + 36)) + 9;
             int id = gen.nextInt(9999) + 1;
-            Game game = new Game(i, maxStep, "u"+id);
-            retVal.add(game);
+            Game game = new Game(maxStep, "u"+id);
+            User temp = new User("u" + id);
+
+            if (retVal.contains(temp)) {
+                temp = retVal.get(retVal.indexOf(temp));
+                temp.addGameToQue(game);
+            }
+            else {
+                temp.addGameToQue(game);
+                retVal.add(temp);
+            }
         }
         return retVal;
+    }
+}
+
+class User {
+    private String UserID;
+    private ArrayList<Game> gamesQue;
+
+    public User(String usrnm) {
+        UserID = usrnm;
+        gamesQue = new ArrayList<>();
+    }
+
+    public void addGameToQue(Game g) {
+        gamesQue.add(g);
+    }
+
+    public boolean isGameStarted() {
+        return gamesQue.get(0).getGameNumber() != -1;
+    }
+
+    public void setGameNumber(int gameNum) {
+        gamesQue.get(0).setGameNumber(gameNum);
+    }
+
+    public boolean hasGameInQue() {
+        return !gamesQue.isEmpty();
+    }
+
+    public JsonObject step() {
+        if (hasGameInQue()) {
+            JsonObject retVal = gamesQue.get(0).step();
+
+            if (gamesQue.get(0).isGameOver()) {
+                gamesQue.remove(0);
+            }
+
+            return retVal;
+        }
+
+        return null;
     }
 }
 
@@ -100,24 +156,25 @@ class Game {
     private boolean gameBegan;
     private int curStep;
     private int points;
+    private int[] specialMove;
 
-    public Game(int gameNumber, int maxSteps, String userID) {
-        this.gameNumber = gameNumber;
-        this.maxSteps = maxSteps;
+    public Game(int mxStps, String userID) {
+        maxSteps = mxStps;
+        gameNumber = -1;
         UserID = userID;
         gameComplete = false;
         gameBegan = false;
         curStep = 1;
         points = 0;
+        specialMove = new int[4];
     }
 
     //need to implement the game result generation algorithm
     public JsonObject step() {
-        String retVal = "";
         JsonObject obj = null;
         if (!gameBegan) {
             obj = Json.createObjectBuilder()
-                    .add("game", curStep)
+                    .add("game", gameNumber)
                     .add("action", Json.createObjectBuilder()
                             .add("actionType", "gameStart")
                             .add("actionNumber", curStep))
@@ -125,14 +182,28 @@ class Game {
                     .build();
             gameBegan = true;
         }
-        else {
-
+        else if (!isGameOver()){
+            String action = getAction();
+            obj = Json.createObjectBuilder()
+                    .add("actionNumber", curStep)
+                    .build();
         }
+//        else if (!isGameOver())
+//        else {
+//
+//        }
 
         curStep++;
 
         return obj;
     }
+
+    private String getAction() {
+
+        return "";
+    }
+
+    public boolean isGameOver() { return gameComplete || curStep == maxSteps; }
 
     public int getGameNumber() {
         return gameNumber;
@@ -157,6 +228,4 @@ class Game {
     public void setUserID(String userID) {
         UserID = userID;
     }
-
-    public boolean getGameCpmplete() { return gameComplete; }
 }
