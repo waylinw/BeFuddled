@@ -1,11 +1,11 @@
 import javax.json.*;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Random;
 
 
 public class beFuddledGen {
+
     public static void main(String[] args) throws IOException {
         String outputFile;
         int numJSONObjectToGenerate;
@@ -44,6 +44,7 @@ public class beFuddledGen {
             System.out.println("Write to file failed. Please try running program again!");
             return;
         }
+
 
         //generate the json object and write to file
         int curGameNumber = 1;
@@ -103,6 +104,7 @@ public class beFuddledGen {
                 retVal.add(temp);
             }
         }
+
         return retVal;
     }
 }
@@ -157,6 +159,7 @@ class Game {
     private int curStep;
     private int points;
     private int[] specialMove;
+    private Random generator;
 
     public Game(int mxStps, String userID) {
         maxSteps = mxStps;
@@ -164,43 +167,160 @@ class Game {
         UserID = userID;
         gameComplete = false;
         gameBegan = false;
-        curStep = 1;
+        curStep = 0;
         points = 0;
         specialMove = new int[4];
+        generator = new Random();
     }
 
     //need to implement the game result generation algorithm
     public JsonObject step() {
         JsonObject obj = null;
+        curStep++;
+        if (isGameOver()) gameComplete = true;
+
         if (!gameBegan) {
             obj = Json.createObjectBuilder()
                     .add("game", gameNumber)
                     .add("action", Json.createObjectBuilder()
                             .add("actionType", "gameStart")
                             .add("actionNumber", curStep))
-                    .add("user", getUserID())
+                    .add("user", UserID)
                     .build();
             gameBegan = true;
         }
         else if (!isGameOver()){
             String action = getAction();
+            if (action.equals("Move")) {
+                int x = getLocation();
+                int y = getLocation();
+                int point = getPoints(-1.5, 8.5);
+                points+= point;
+                obj = Json.createObjectBuilder()
+                        .add("game", gameNumber)
+                        .add("action", Json.createObjectBuilder()
+                            .add("actionType", action)
+                            .add("pointsAdded", point)
+                            .add("actionNumber", curStep)
+                            .add("location", Json.createObjectBuilder()
+                                .add("x", x)
+                                .add("y", y))
+                            .add("points", points))
+                        .add("user", UserID)
+                        .build();
+            }
+            else {
+                String specialMove = getSpecialMoveType();
+                int point = getPoints(10, 3);
+                points+=point;
+                obj = Json.createObjectBuilder()
+                        .add("game", gameNumber)
+                        .add("action", Json.createObjectBuilder()
+                                .add("actionType", action)
+                                .add("move", specialMove)
+                                .add("pointsAdded", point)
+                                .add("actionNumber", curStep)
+                                .add("points", points))
+                        .add("user", UserID)
+                        .build();
+            }
+        }
+        else if (isGameOver()) {
             obj = Json.createObjectBuilder()
-                    .add("actionNumber", curStep)
+                    .add("game", gameNumber)
+                    .add("action", Json.createObjectBuilder()
+                            .add("actionType", "GameEnd")
+                            .add("actionNumber", curStep)
+                            .add("points", points)
+                            .add("gameStatus", points > 1 ? "Win" : "Loss"))
+                    .add("user", UserID)
                     .build();
         }
-//        else if (!isGameOver())
-//        else {
-//
-//        }
-
-        curStep++;
 
         return obj;
     }
 
+    /**
+     * gets the action type with less than 5% chance of getting a special move
+     * @return Move or SpecialMove
+     */
     private String getAction() {
+        boolean specialMove = generator.nextDouble() < .05;
+        if (!specialMove || !isSpecialMoveAvailable()) {
+            return "Move";
+        }
+        else {
+            return "SpecialMove";
+        }
+    }
 
-        return "";
+    /**
+     * Checks and see if any special moves are still available
+     * @return true/false
+     */
+    private boolean isSpecialMoveAvailable() {
+        int sum = 0;
+        for (int i : specialMove)
+            sum +=i;
+        return sum < 4;
+    }
+
+    /**
+     * Return random int from normal distribution with mean = 10 and sigma = 4.5
+     * @return int location from 1 to 20
+     */
+    private int getLocation() {
+        int loc = Math.abs((int) (generator.nextGaussian() * 4.5 + 10));
+
+        if (loc < 1)
+            loc = 1;
+        if (loc > 20)
+            loc = 20;
+
+        return loc;
+    }
+
+    /**
+     * returns a random int generated from normal distribution with given mean and sigma
+     * This is used for the score
+     * @param mean average score
+     * @param sigma standard deviation
+     * @return int points from -20 to 20
+     */
+    private int getPoints(double mean, double sigma) {
+        int pt = (int) (generator.nextGaussian() * sigma + mean);
+        if (pt < -20)
+            pt = -20;
+        if (pt > 20)
+            pt = 20;
+
+        return pt;
+    }
+
+
+    private String getSpecialMoveType() {
+        int moveType = 3;
+
+        double move = generator.nextDouble();
+        if (move < .3) {
+            moveType = 0;
+        }
+        else if (move < .55) {
+            moveType = 1;
+        }
+        else if (move < .78) {
+            moveType = 2;
+        }
+
+        while (specialMove[moveType] != 0) {
+            moveType++;
+            if (moveType == 4)
+                moveType = 0;
+        }
+
+        specialMove[moveType] = 1;
+
+        return specialMovesList[moveType];
     }
 
     public boolean isGameOver() { return gameComplete || curStep == maxSteps; }
@@ -213,19 +333,5 @@ class Game {
         this.gameNumber = gameNumber;
     }
 
-    public int getMaxSteps() {
-        return maxSteps;
-    }
-
-    public void setMaxSteps(int maxSteps) {
-        this.maxSteps = maxSteps;
-    }
-
-    public String getUserID() {
-        return UserID;
-    }
-
-    public void setUserID(String userID) {
-        UserID = userID;
-    }
+    private static final String[] specialMovesList = new String[] {"Shuffle", "Clear", "Invert", "Rotate"};
 }
