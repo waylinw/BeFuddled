@@ -1,3 +1,8 @@
+/**
+ * CPE 369, Lab 1 Part 1, 1/10/2016
+ * Waylin Wang, Myron Zhao
+ */
+
 import javax.json.*;
 import javax.json.stream.JsonGenerator;
 import java.io.*;
