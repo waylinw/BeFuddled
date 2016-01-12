@@ -71,7 +71,7 @@ public class beFuddledGen {
 
             //Calls the step method that returns a String to be printed to file
             try {
-                writer.println(curUser.step());
+                writer.println(curUser.step() + ",");
             } catch (Exception e) {
                 System.out.println("Write to file failed. Please try running program again!");
                 return;
