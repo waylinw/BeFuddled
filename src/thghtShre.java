@@ -61,6 +61,7 @@ public class thghtShre {
 
         //Setup file output writer
         JsonWriter writer;
+        PrintWriter pWriter;
         try {
             fw = new FileWriter(outputFile);
         }
@@ -78,9 +79,19 @@ public class thghtShre {
         //Create JsonWriter
         try {
             writer = factory.createWriter(fw);
+            pWriter = new PrintWriter(fw);
         }
         catch (Exception e) {
             System.out.println("Create file failed. Please try again!");
+            return;
+        }
+
+
+        // Write punctuation
+        try {
+            pWriter.write("[");
+        } catch (Exception e) {
+            System.out.println("Write to file failed. Please try running program again!");
             return;
         }
 
@@ -124,8 +135,30 @@ public class thghtShre {
                 e.printStackTrace();
                 return;
             }
+
+
+            // Write punctuation
+            if (i != numJSONObjectToGenerate - 1) {
+                try {
+                    pWriter.write(",");
+                } catch (Exception e) {
+                    System.out.println("Write to file failed. Please try running program again!");
+                    return;
+                }
+            }
+
         }
 
+
+        // Write punctuation
+        try {
+            pWriter.write("]");
+        } catch (Exception e) {
+            System.out.println("Write to file failed. Please try running program again!");
+            return;
+        }
+
+        pWriter.close();
         writer.close();
     }
 }
@@ -234,6 +267,7 @@ class Message {
         if (this.getStatus().equals("private")) {
             if ((rngNum = rng.nextInt(100)) < 90) {
                 while (this.setRecepient("u" + (rng.nextInt(10000) + 1)).equals(this.getUser())){
+                    ;
                 }
             }
             else {
@@ -248,6 +282,7 @@ class Message {
             }
             else if (rngNum < 95) {
                 while (this.setRecepient("u" + (rng.nextInt(10000) + 1)).equals(this.getUser())){
+                    ;
                 }
             }
             else {
