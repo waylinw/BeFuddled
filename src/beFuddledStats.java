@@ -1,7 +1,12 @@
+/**
+ * CPE 369, Lab 1 Part 2, 1/11/2016
+ * Waylin Wang, Myron Zhao
+ */
+
 import javax.json.*;
+import javax.json.stream.JsonGenerator;
 import javax.json.stream.JsonParser;
 import javax.json.stream.JsonParserFactory;
-import java.awt.*;
 import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -9,42 +14,6 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.*;
 
-/**
- * Created by WaylinWang on 1/11/16.
- */
-
-/**
- * Gamestats:
- * total number of games
- * total number of completed games
- * number of win
- * number of loss
- *
- * completed games: average and std dev
- * total number of points in the game
- * number of points in won games
- * number of points in loss games
- * number of moves in a game
- * number of moves in games won
- * number of moves in games lost
- * moves histogram:, 0-15) [15-30) [30-40) [40-50) [50-60) [60-80) [80-inf)
- *
- * users who played 1 complete game:
- * total who started at least 1 game
- * total who completed at least 1 game
- * largest number of games a user started
- * largest number of games a user completed
- * largest number of wins a user have
- * largest number of loss a single user had
- * largest number of moves in a single game, report userid only
- * report the userid as well, unless too many
- *
- * identify the 10 most popular locations, all moves from all games, in histogram
- *
- * histogram of frequency of special moves
- *
- *
- */
 public class beFuddledStats {
     public static void main(String[] args) {
         boolean saveToFile = false;
@@ -326,10 +295,12 @@ public class beFuddledStats {
 
 
         PrintWriter writer;
+        FileWriter fileWriter;
 
         if (saveToFile) {
             try {
-                writer = new PrintWriter(new FileWriter(saveFile));
+                fileWriter = new FileWriter(saveFile);
+                writer = new PrintWriter(fileWriter);
             }
             catch (Exception e) {
                 System.out.println("Create file failed. Please try again!");
@@ -343,6 +314,111 @@ public class beFuddledStats {
                 System.out.println("Write to file failed. Please try running program again!");
                 return;
             }
+
+            //print to file
+            config.put(JsonGenerator.PRETTY_PRINTING, true);
+            JsonBuilderFactory builderFactory = Json.createBuilderFactory(config);
+            JsonWriterFactory writerFactory = Json.createWriterFactory(config);
+            JsonWriter jsonWriter = writerFactory.createWriter(fileWriter);
+
+            JsonObjectBuilder largestNumGamesStartedBuilder = builderFactory.createObjectBuilder();
+            if (BR7Data.largestNumGameStartedUser.size() < 10)
+                for (int i = 0; i < BR7Data.largestNumGameStartedUser.size(); i++)
+                    largestNumGamesStartedBuilder.add("User", BR7Data.largestNumGameStartedUser.get(i));
+            else
+                largestNumGamesStartedBuilder.add("Number of Users", BR7Data.largestNumGameStartedUser.size());
+            JsonObject largestNumGamesStarted = largestNumGamesStartedBuilder.build();
+
+            JsonObjectBuilder largestNumGamesCompletedBuilder = builderFactory.createObjectBuilder();
+            if (BR7Data.largestNumGameCompletedUser.size() < 10)
+                for (int i = 0; i < BR7Data.largestNumGameCompletedUser.size(); i++)
+                    largestNumGamesCompletedBuilder.add("User", BR7Data.largestNumGameCompletedUser.get(i));
+            else
+                largestNumGamesCompletedBuilder.add("Number of Users", BR7Data.largestNumGameCompletedUser.size());
+            JsonObject largestNumGamesCompleted = largestNumGamesCompletedBuilder.build();
+
+            JsonObjectBuilder largestNumWinsSingleUserHadBuilder = builderFactory.createObjectBuilder();
+            if (BR7Data.largestNumWinsUser.size() < 10)
+                for (int i = 0; i < BR7Data.largestNumWinsUser.size(); i++)
+                    largestNumWinsSingleUserHadBuilder.add("User", BR7Data.largestNumWinsUser.get(i));
+            else
+                largestNumWinsSingleUserHadBuilder.add("Number of Users", BR7Data.largestNumWinsUser.size());
+            JsonObject largestNumWinsSingleUserHad = largestNumWinsSingleUserHadBuilder.build();
+
+            JsonObjectBuilder largestNumLossSingleUserHadBuilder = builderFactory.createObjectBuilder();
+            if (BR7Data.largestLossUser.size() < 10)
+                for (int i = 0; i < BR7Data.largestLossUser.size(); i++)
+                    largestNumWinsSingleUserHadBuilder.add("User", BR7Data.largestLossUser.get(i));
+            else
+                largestNumWinsSingleUserHadBuilder.add("Number of Users", BR7Data.largestLossUser.size());
+            JsonObject largestNumLossSingleUserHad = largestNumLossSingleUserHadBuilder.build();
+
+            JsonObjectBuilder longestGameMoveBuilder = builderFactory.createObjectBuilder();
+            if (BR7Data.longestGamesUser.size() < 10)
+                for (String temp : BR7Data.longestGamesUser)
+                    longestGameMoveBuilder.add("User", temp);
+            else
+                longestGameMoveBuilder.add("Number of Users", BR7Data.longestGamesUser.size());
+            JsonObject longestGameMove = longestGameMoveBuilder.build();
+
+            JsonObjectBuilder mostPopLocBuilder = builderFactory.createObjectBuilder();
+            for (int i = 0; i < 10; i++) {
+                mostPopLocBuilder.add(locList.get(i).getLocPrint(), locList.get(i).getCount());
+            }
+            JsonObject mostPopLoc = mostPopLocBuilder.build();
+
+            JsonObjectBuilder specialMoveBuilder = builderFactory.createObjectBuilder();
+            for (int i = 0; i < 4; i++) {
+                specialMoveBuilder.add(specialMovesList[i], specialMoves[i]);
+            }
+            JsonObject specialMove = specialMoveBuilder.build();
+
+            JsonObject jsonObject = builderFactory.createObjectBuilder()
+                    .add("Game Stats", builderFactory.createObjectBuilder()
+                            .add("Total Games In Input File", (int)BR5Data.totalGames)
+                            .add("Number of Users That Started at Least One Game", BR7Data.numUserStartedGame)
+                            .add("Number of Users That Completed at Least One Game", BR7Data.numUserCompletedGame)
+                            .add("Total Completed Games", (int)BR5Data.totalCompGames)
+                            .add("Completed Games Average Score",BR5Data.totalPtsAvg)
+                            .add("Completed Games Score Standard Deviation",BR5Data.totalPtsStdDev)
+                            .add("Total Games Won", (int)BR5Data.totalWin)
+                            .add("Won Games Average Score", BR5Data.wonPtsAvg)
+                            .add("Won Games Score Standard Deviation", BR5Data.wonPtsStdDev)
+                            .add("Total Games Loss", (int)BR5Data.totalLoss)
+                            .add("Loss Games Average Score", BR5Data.lossPtsAvg)
+                            .add("Loss Games Score Standard Deviation", BR5Data.lossPtsStdDev)
+                            .add("Completed Games Average Number of Moves", BR6Data.totalMovesAvg)
+                            .add("Completed Games Number of Moves Standard Deviation", BR6Data.totalMovesStdDev)
+                            .add("Won Games Average Number of Moves", BR6Data.winMovesAvg)
+                            .add("Won Games Number of Moves Standard Deviation", BR6Data.winMovesStdDev)
+                            .add("Loss Games Average Number of Moves", BR6Data.lossMovesAvg)
+                            .add("Loss Games Number of Moves Standard Deviation", BR6Data.lossMovesStdDev)
+                            .add("Histogram of Moves in Completed Games", builderFactory.createObjectBuilder()
+                                    .add("[0, 15)", BR6Data.histogram[0])
+                                    .add("[15, 30)", BR6Data.histogram[1])
+                                    .add("[30, 40)", BR6Data.histogram[2])
+                                    .add("[40, 50)", BR6Data.histogram[3])
+                                    .add("[50, 60)", BR6Data.histogram[4])
+                                    .add("[60, 80)", BR6Data.histogram[5])
+                                    .add("[80, INF)", BR6Data.histogram[6]))
+                            .add("Largest Number of Games Started", BR7Data.largestNumGameStarted)
+                            .add("Users with Largest Number of Games Started", largestNumGamesStarted)
+                            .add("Largest Number of Games Completed", BR7Data.largestNumGamesCompleted)
+                            .add("Users with Largest Number of Games Completed", largestNumGamesCompleted)
+                            .add("Largest Number of Wins a Single User Had", BR7Data.largestNumWin)
+                            .add("Users with Largest Number of Wins Recorded", largestNumWinsSingleUserHad)
+                            .add("Largest Number of Loss a Single User Had", BR7Data.largestSingleLoss)
+                            .add("Users with Largest Number of Loss Recorded", largestNumLossSingleUserHad)
+                            .add("Largest Number of Move in a Single Game", BR7Data.longestGameMove)
+                            .add("Users with Largest Number of Move in a Single Game", longestGameMove)
+                            .add("Histogram of Top Ten Most Popular Locations", mostPopLoc)
+                            .add("Histogram of Number of Special Moves Used", specialMove))
+                    .build();
+
+            jsonWriter.write(jsonObject);
+            writer.println("\n]");
+            jsonWriter.close();
+            writer.close();
         }
 
 
@@ -726,7 +802,11 @@ class LocCount {
     }
 
     public String toString() {
-        return "(" + (int)loc.getX() + ", " + (int)loc.getY() + ") has " + count + "hits.";
+        return "(" + (int)loc.getX() + ", " + (int)loc.getY() + ") has " + count + " hits.";
+    }
+
+    public String getLocPrint() {
+        return "(" + (int)loc.getX() + ", " + (int)loc.getY() + ")";
     }
 }
 
