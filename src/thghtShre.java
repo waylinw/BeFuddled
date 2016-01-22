@@ -108,17 +108,17 @@ public class thghtShre {
             //Determine if message is in-response and create JSON object accordingly
             if (msg.getInResponse() != -1) {
                 obj = Json.createObjectBuilder()
-                        .add("messageID", Integer.toString(msg.getMessageId()))
+                        .add("messageID", msg.getMessageId())
                         .add("user", msg.getUser())
                         .add("status", msg.getStatus())
                         .add("recepient", msg.getRecepient())
-                        .add("in-response", Integer.toString(msg.getInResponse()))
+                        .add("in-response", msg.getInResponse())
                         .add("text", msg.getText())
                         .build();
             }
             else {
                 obj = Json.createObjectBuilder()
-                        .add("messageID", Integer.toString(msg.getMessageId()))
+                        .add("messageID", msg.getMessageId())
                         .add("user", msg.getUser())
                         .add("status", msg.getStatus())
                         .add("recepient", msg.getRecepient())
